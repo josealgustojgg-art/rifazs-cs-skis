@@ -74,3 +74,13 @@ WebGL/aceleração gráfica são necessários. Partículas limitadas a 180, reso
 ## Modelos GLB opcionais
 
 Coloque modelos licenciados em public/models e use `window.planalto.loadModel('r','/models/lula.glb')` ou a equipe `g`. Altura é normalizada; eixo Y vertical, frente +Z. Clipes `run`, `idle`, `celebrate`, sem distinção de maiúsculas. Erros mantêm o personagem anterior. Sem clipes não há animação esquelética; expressões/morph targets não estão implementados. Carregamento é local à janela.
+
+## Exportador local: sem procurar requisições manualmente
+
+A pasta `ferramenta-catalogo` contém uma extensão local Manifest V3 para Edge/Chrome 111+. Em `edge://extensions` (ou `chrome://extensions`), ative Modo do desenvolvedor, use Carregar sem compactação e selecione a pasta que contém manifest.json. Atualize uma aba www.tiktok.com e abra o painel de presentes como espectador, sem iniciar uma transmissão ou enviar presentes.
+
+O quadro Corrida do Planalto mostra quantos presentes foram encontrados. Salvar lista de presentes baixa `catalogo-presentes-tiktok.json`. No jogo, abra Importar lista do TikTok e use Selecionar arquivo da lista. Depois configure os quatro pares e confira os dados.
+
+A ferramenta observa apenas respostas de `gift/list` que o próprio site carregou por fetch/XHR, mantendo as requisições normais do TikTok. Não lê cookies/senhas, não inicia lives, não envia presentes e não transmite dados a servidores. O arquivo contém só metadados de presentes. Nenhuma assinatura ou verificação TLS é desativada. Se a interface/API mudar e a lista não for capturada, a ferramenta fica aguardando e não inventa dados. A extensão pode ser removida após exportar.
+
+`node tests/exporter-browser-smoke.mjs` executa o script real do exportador no Chromium com respostas simuladas e verifica fetch/XHR, deduplicação, arquivo JSON e descarte de campos privados. Não confirma a captura no TikTok real. O teste `support-cards-smoke.mjs` também verifica selecionar esse arquivo no jogo e configurar os quatro pares com a live desligada.

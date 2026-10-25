@@ -1,0 +1,19 @@
+FERRAMENTA LOCAL - EXPORTAR LISTA DE PRESENTES
+
+No Microsoft Edge:
+1. Abra edge://extensions
+2. Ative Modo do desenvolvedor.
+3. Clique Carregar sem compactacao e selecione ESTA pasta (a que contem manifest.json).
+4. Volte a uma aba https://www.tiktok.com e atualize a pagina.
+5. Como espectador, abra o painel de presentes de uma live, sem enviar nada.
+6. O quadro Corrida do Planalto mostrara a quantidade de presentes encontrados.
+7. Clique SALVAR LISTA DE PRESENTES.
+8. No jogo, em Importar lista do TikTok, selecione o arquivo catalogo-presentes-tiktok.json.
+
+No Chrome, use chrome://extensions e Carregar sem compactacao.
+
+A ferramenta observa respostas gift/list que o proprio site ja carregou por fetch ou XHR.
+Nao inicia transmissoes, nao envia presentes, nao consulta senhas/cookies, nao envia dados a servidores.
+Exporta somente ID, nome, custo e imagem HTTPS. A lista pode variar por conta/regiao.
+Se nao encontrar dados, a interface TikTok pode ter mudado; nao exporta IDs inventados.
+Depois de exportar, voce pode remover a extensao pela pagina de extensoes.

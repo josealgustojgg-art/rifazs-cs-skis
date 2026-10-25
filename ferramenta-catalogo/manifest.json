@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Corrida do Planalto — Exportar presentes",
+  "version": "1.0.0",
+  "description": "Exporta apenas IDs, nomes, preços e imagens dos presentes carregados pelo painel TikTok nesta aba.",
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.tiktok.com/*"
+      ],
+      "js": [
+        "capture.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    }
+  ],
+  "minimum_chrome_version": "111"
+}
