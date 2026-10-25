@@ -1,3 +1,4 @@
+import {safeGiftImage,giftCoins} from './gift-images.js';
 const KINDS = new Set(['rose','heart','turbo','special']);
 export function validateRules(value) {
  if(!Array.isArray(value)||value.length>30)throw new Error('Configure no máximo 30 presentes.');
@@ -5,7 +6,7 @@ export function validateRules(value) {
   const id=String(rule.id??'').trim(),name=String(rule.name??'').trim();
   if(!/^\d{1,12}$/.test(id)||Number(id)<1||ids.has(id))throw new Error('Cada presente precisa de um ID numérico único.');
   if(!['r','g'].includes(rule.team)||!KINDS.has(rule.kind))throw new Error('Corredor ou efeito inválido.');
-  ids.add(id);return {id,name:name.slice(0,80)||`Presente ${id}`,team:rule.team,kind:rule.kind};
+  ids.add(id);return {id,name:name.slice(0,80)||`Presente ${id}`,team:rule.team,kind:rule.kind,imageUrl:safeGiftImage(rule.imageUrl),coins:giftCoins(rule.coins)};
  });
 }
 export function normalizeUsername(value) {

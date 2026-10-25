@@ -1,0 +1,18 @@
+import {chromium} from '@playwright/test';import assert from 'node:assert/strict';import {spawn} from 'node:child_process';import {once} from 'node:events';import {mkdtemp,rm} from 'node:fs/promises';import {tmpdir} from 'node:os';import {join} from 'node:path';
+const temp=await mkdtemp(join(tmpdir(),'planalto-cards-'));const base='http://127.0.0.1:18318';const server=spawn(process.execPath,['server/index.js'],{cwd:process.cwd(),env:{...process.env,PLANALTO_PORT:'18318',PLANALTO_CONFIG_PATH:join(temp,'config.json')},stdio:'ignore'});let browser;
+try{
+ let ready=false;for(let i=0;i<60;i++){try{if((await fetch(base+'/api/state')).ok){ready=true;break;}}catch{}await new Promise(r=>setTimeout(r,100));}assert.equal(ready,true);
+ browser=await chromium.launch({executablePath:'/usr/bin/chromium',args:['--no-sandbox','--enable-unsafe-swiftshader']});const page=await browser.newPage({viewport:{width:1080,height:1920}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.route('https://cdn.example.test/**',route=>route.request().url().endsWith('broken.png')?route.abort():route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect x="8" y="25" width="48" height="34" rx="5" fill="#f4b751"/><path d="M32 15v44M8 30h48" stroke="#ec4b78" stroke-width="8"/></svg>'}));
+ await page.goto(base+'/?live=1');await page.waitForFunction(()=>!!window.planalto);
+ await page.waitForFunction(()=>document.getElementById('connection-status').textContent.includes('Modo de teste'));
+ assert.equal(await page.locator('#mapped-gift-name-r').textContent(),'Presente não configurado');assert.equal(await page.locator('#mapped-gift-image-r').isVisible(),false);
+ const save=rules=>fetch(base+'/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:'soou_jg',rules})});
+ const rules=[{id:'1001',name:'Presente teste A',team:'r',kind:'rose',coins:1,imageUrl:'https://cdn.example.test/a.png'},{id:'1002',name:'Presente teste B',team:'g',kind:'rose',coins:1,imageUrl:'https://cdn.example.test/b.png'}];assert.equal((await save(rules)).status,200);
+ await page.locator('#mapped-gift-image-r').waitFor({state:'visible'});await page.locator('#mapped-gift-image-g').waitFor({state:'visible'});
+ for(const id of ['r','g']){const portrait=await page.locator('.portrait-'+id).boundingBox(),gift=await page.locator('#mapped-gift-image-'+id).boundingBox();assert.ok(portrait.y+portrait.height<gift.y);assert.equal(await page.locator('#mapped-gift-cost-'+id).textContent(),'1 moeda');}
+ assert.equal((await page.locator('#app').boundingBox()).height,1920);const arena=await page.locator('#arena').boundingBox();assert.ok(arena.height>600);await page.screenshot({path:'/tmp/planalto-support-cards.png'});
+ const saved=await(await fetch(base+'/api/state')).json();assert.equal(saved.config.rules[0].imageUrl,rules[0].imageUrl);
+ assert.equal((await save([{...rules[0],imageUrl:'https://cdn.example.test/broken.png'},rules[1]])).status,200);await page.locator('#mapped-gift-image-r').waitFor({state:'hidden'});assert.equal(await page.locator('#mapped-gift-name-r').textContent(),'Presente teste A');
+ assert.deepEqual(errors,[]);console.log('PASS: candidate portrait above gift thumbnail, catalog metadata persistence, 9:16 layout, unconfigured and failed-image fallback; no JS errors.');
+}finally{await browser?.close();server.kill('SIGTERM');await Promise.race([once(server,'exit'),new Promise(r=>setTimeout(r,1000))]);if(server.exitCode===null)server.kill('SIGKILL');await rm(temp,{recursive:true,force:true});}

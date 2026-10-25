@@ -85,3 +85,7 @@ O HTML original enviado foi analisado e preservado nos anexos: corrida CSS, pont
 ## Correção Windows 11: HTTP 403
 
 A checagem de arquivos estáticos usa caminhos nativos do sistema, incluindo barras invertidas do Windows. Se uma versão antiga responder 403, encerre o servidor com Ctrl+C e use a versão atualizada. Não é necessário desativar o Controle de Aplicativo Inteligente; se o .bat for bloqueado, abra cmd na pasta do projeto, execute npm ci --omit=dev e depois npm run start:open.
+
+## Cartões visuais de presentes
+
+O placar mostra o retrato ilustrado de cada candidato acima da imagem do presente atribuído a ele. Ao selecionar um item no catálogo e salvar, são preservados ID, nome, imagem HTTPS e custo informado. O público vê o presente correspondente abaixo do retrato, sem precisar selecionar candidato. Imagem ausente ou inacessível mantém um ícone neutro e o nome; sem mapeamento aparece Presente não configurado. As cabeças continuam sendo ilustrações, não fotografias. `node tests/support-cards-smoke.mjs` verifica posição dos retratos, miniaturas com fixtures, persistência e fallback no Chromium.

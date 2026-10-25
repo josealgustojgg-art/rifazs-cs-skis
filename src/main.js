@@ -3,6 +3,7 @@ import {Race,CONFIG} from './game.js';
 import {World} from './scene.js';
 import {AudioFX} from './audio.js';
 import {LiveClient} from './live.js';
+import {initSupportCards,renderSupportCards} from './support-cards.js';
 const $=id=>document.getElementById(id),race=new Race(),audio=new AudioFX();let world,team='r',toastUntil=0;
 try{world=new World($('scene'),race);}catch(error){$('render-error').hidden=false;$('render-error').textContent='Não foi possível iniciar o WebGL. Ative a aceleração gráfica e recarregue a página.';console.error(error);}
 function toast(text){$('toast').textContent=text;toastUntil=performance.now()+3500;}
@@ -15,16 +16,17 @@ $('pause').onclick=()=>race.toggle();$('reset').onclick=()=>race.reset();$('soun
 // Both local simulation and real server events share the same game presentation.
 const gifts=new EventTarget();gifts.addEventListener('gift',({detail})=>{if(detail&&typeof detail==='object')race.gift(detail.team,detail.kind);});
 window.planalto={gifts,config:CONFIG,loadModel:async(team,url)=>{if(!['r','g'].includes(team)||!world)return false;const ok=await world.loadModel(team,url);toast(ok?'Modelo GLB carregado.':'Falha no GLB: personagem provisório mantido.');return ok;}};
+initSupportCards();
 let info=null,hydrated=false;
 const live=new LiveClient(race,{onInfo:data=>{
- info=data;const connected=data.status.state==='connected';$('connection-status').textContent=data.status.message+(data.pending?` · ${data.pending} presentes na fila`:'');$('live-label').textContent=connected?'TIKTOK AO VIVO':'TESTE LOCAL';$('integration-status').textContent=connected?'EVENTOS DA LIVE CONECTADA':'SIMULAÇÃO LOCAL • TIKTOK DESCONECTADO';
+ info=data;renderSupportCards(data.config.rules,data.catalog);const connected=data.status.state==='connected';$('connection-status').textContent=data.status.message+(data.pending?` · ${data.pending} presentes na fila`:'');$('live-label').textContent=connected?'TIKTOK AO VIVO':'TESTE LOCAL';$('integration-status').textContent=connected?'EVENTOS DA LIVE CONECTADA':'SIMULAÇÃO LOCAL • TIKTOK DESCONECTADO';
  $('connect-live').disabled=['connecting','connected'].includes(data.status.state);$('save-live').disabled=data.status.state==='connecting';
  if(!hydrated){$('live-username').value=data.config.username||'soou_jg';for(const rule of data.config.rules){$('gift-id-'+rule.team).value=rule.id;$('gift-name-'+rule.team).value=rule.name;$('gift-kind-'+rule.team).value=rule.kind;}hydrated=true;}
  const mapping=data.config.rules.map(rule=>`${rule.team==='r'?'LULA':'FLÁVIO'}: ${rule.name} → +${(CONFIG.gifts[rule.kind].points*CONFIG.giftDistanceScale).toLocaleString('pt-BR')}%`).join('  |  ');$('gift-mapping').textContent=mapping||'Configure um presente distinto para cada corredor no painel abaixo.';
- for(const id of ['r','g']){const select=$('catalog-'+id);const signature=JSON.stringify(data.catalog);if(select.dataset.signature!==signature){select.dataset.signature=signature;select.replaceChildren(new Option(data.catalog.length?'Selecione um presente':'Sem catálogo: conecte e clique em Buscar catálogo',''));for(const gift of data.catalog)select.add(new Option(`${gift.name} · ${gift.coins} moedas · ID ${gift.id}`,gift.id));}}
+ for(const id of ['r','g']){const select=$('catalog-'+id);const signature=JSON.stringify(data.catalog);if(select.dataset.signature!==signature){select.dataset.signature=signature;select.replaceChildren(new Option(data.catalog.length?'Selecione um presente':'Sem catálogo: conecte e clique em Buscar catálogo',''));for(const gift of data.catalog)select.add(new Option(`${gift.name} · ${gift.coins==null?'valor não informado':gift.coins+' moedas'} · ID ${gift.id}`,gift.id));}}
 },onStatus:message=>{$('connection-status').textContent=message;if(message.startsWith('Sem conexão')||message.startsWith('Arquivo HTML')){$('live-label').textContent='SEM CONEXÃO';$('integration-status').textContent='TIKTOK SEM CONEXÃO';}},onError:message=>{$('live-feedback').textContent=message;}});
 async function action(button,fn){button.disabled=true;$('live-feedback').textContent='Processando…';try{await fn();$('live-feedback').textContent='Solicitação concluída. Confira o estado da conexão acima.';}catch{}finally{button.disabled=false;}}
-$('save-live').onclick=()=>action($('save-live'),()=>{const rules=['r','g'].filter(id=>$('gift-id-'+id).value.trim()).map(id=>({id:$('gift-id-'+id).value.trim(),name:$('gift-name-'+id).value,team:id,kind:$('gift-kind-'+id).value}));return live.request('config',{username:$('live-username').value,rules});});
+$('save-live').onclick=()=>action($('save-live'),()=>{const rules=['r','g'].filter(id=>$('gift-id-'+id).value.trim()).map(id=>{const giftId=$('gift-id-'+id).value.trim(),metadata=info?.catalog.find(g=>g.id===giftId)??info?.config.rules.find(g=>g.id===giftId);return {id:giftId,name:$('gift-name-'+id).value,team:id,kind:$('gift-kind-'+id).value,imageUrl:metadata?.imageUrl??'',coins:metadata?.coins??null};});return live.request('config',{username:$('live-username').value,rules});});
 $('connect-live').onclick=()=>action($('connect-live'),()=>live.request('connect'));
 $('disconnect-live').onclick=()=>action($('disconnect-live'),()=>live.request('disconnect'));
 $('refresh-gifts').onclick=()=>action($('refresh-gifts'),()=>live.request('catalog'));
