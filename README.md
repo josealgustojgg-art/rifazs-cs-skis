@@ -84,3 +84,9 @@ O quadro Corrida do Planalto mostra quantos presentes foram encontrados. Salvar 
 A ferramenta observa apenas respostas de `gift/list` que o próprio site carregou por fetch/XHR, mantendo as requisições normais do TikTok. Não lê cookies/senhas, não inicia lives, não envia presentes e não transmite dados a servidores. O arquivo contém só metadados de presentes. Nenhuma assinatura ou verificação TLS é desativada. Se a interface/API mudar e a lista não for capturada, a ferramenta fica aguardando e não inventa dados. A extensão pode ser removida após exportar.
 
 `node tests/exporter-browser-smoke.mjs` executa o script real do exportador no Chromium com respostas simuladas e verifica fetch/XHR, deduplicação, arquivo JSON e descarte de campos privados. Não confirma a captura no TikTok real. O teste `support-cards-smoke.mjs` também verifica selecionar esse arquivo no jogo e configurar os quatro pares com a live desligada.
+
+## Tela de transmissão sem avisos de operação
+
+Em /?live=1 não aparecem Teste local, mensagens de configuração ou a lista duplicada acima da pista. Os avisos técnicos continuam no painel do operador. Antes de conectar, a tela pública diz Aguardando início da corrida, com rótulo neutro Corrida interativa; só após conexão confirmada aparece Ao vivo. Durante a corrida usa instruções sobre os presentes dos corredores.
+
+`entrega/atualizacao-visual.zip` contém apenas a pasta dist. Para esta alteração visual, extraia e copie dist sobre a pasta dist da instalação existente, aceitando substituir arquivos, depois recarregue o navegador com Ctrl+F5. Isso preserva os arquivos locais de configuração/importação e dispensa reinstalar dependências ou reiniciar o servidor.
