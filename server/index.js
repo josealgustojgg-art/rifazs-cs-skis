@@ -7,6 +7,7 @@ import {WebSocketServer,WebSocket} from 'ws';
 import {Race,CONFIG} from '../src/game.js';
 import {GiftRouter,validateRules,normalizeUsername} from './gifts.js';
 import {TikTokBridge} from './tiktok.js';
+import {resolveStaticPath} from './paths.js';
 
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const file=process.env.PLANALTO_CONFIG_PATH?resolve(process.env.PLANALTO_CONFIG_PATH):resolve(root,'.planalto-live.json'),dist=resolve(root,'dist');
@@ -63,7 +64,7 @@ const server=http.createServer(async(req,res)=>{
   if(req.method!=='GET'&&req.method!=='HEAD'){res.writeHead(405);res.end();return;}
   if(pathname==='/favicon.ico'){res.writeHead(204);res.end();return;}
   const relative=pathname==='/'?'index.html':decodeURIComponent(pathname).replace(/^\//,'');
-  const target=resolve(dist,relative);if(!target.startsWith(dist+'/')){res.writeHead(403);res.end();return;}
+  const target=resolveStaticPath(dist,relative);if(!target){res.writeHead(403);res.end();return;}
   const contents=await readFile(target);const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css','.png':'image/png','.glb':'model/gltf-binary'}[extname(target)]??'application/octet-stream';
   res.writeHead(200,{'Content-Type':mime,'Cache-Control':'no-store'});res.end(req.method==='HEAD'?undefined:contents);
  }catch(error){if(error.code==='ENOENT'){res.writeHead(404);res.end('Arquivo não encontrado. Execute npm run build antes de iniciar.');}else json(res,400,{error:error.message?.slice(0,240)||'Pedido inválido.'});}

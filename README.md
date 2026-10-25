@@ -81,3 +81,7 @@ Eixo Y vertical, frente +Z, altura normalizada automaticamente. Clipes `run`, `i
 - `src/main.js`, `audio.js`, `style.css`: interface e áudio.
 
 O HTML original enviado foi analisado e preservado nos anexos: corrida CSS, pontuação, rosa/turbo, contador, pausa, reinício e confetes. A versão atual conserva essas capacidades e acrescenta cena 3D e ponte local.
+
+## Correção Windows 11: HTTP 403
+
+A checagem de arquivos estáticos usa caminhos nativos do sistema, incluindo barras invertidas do Windows. Se uma versão antiga responder 403, encerre o servidor com Ctrl+C e use a versão atualizada. Não é necessário desativar o Controle de Aplicativo Inteligente; se o .bat for bloqueado, abra cmd na pasta do projeto, execute npm ci --omit=dev e depois npm run start:open.
