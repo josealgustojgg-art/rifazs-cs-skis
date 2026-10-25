@@ -6,5 +6,5 @@ export function giftCoins(value){const number=Number(value);return value!==null&
 export function catalogGift(gift){
  const images=gift.image?.url_list??gift.image?.urlList??gift.image?.urls??gift.icon?.url_list??[];
  const urls=Array.isArray(images)?images:[];
- return {id:String(gift.id),name:String(gift.name??gift.describe??`Presente ${gift.id}`),coins:giftCoins(gift.diamond_count??gift.diamondCount),imageUrl:urls.map(safeGiftImage).find(Boolean)||safeGiftImage(gift.imageUrl)||''};
+ return {id:String(gift.id??gift.giftId),name:String(gift.name??gift.giftName??gift.describe??`Presente ${gift.id??gift.giftId}`),coins:giftCoins(gift.diamond_count??gift.diamondCount),imageUrl:urls.map(safeGiftImage).find(Boolean)||safeGiftImage(gift.imageUrl)||safeGiftImage(gift.imageUri)||''};
 }

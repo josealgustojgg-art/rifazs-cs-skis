@@ -9,6 +9,7 @@ function diagnostic(error){
  else if(/SignatureMissingTokensError/.test(name)){category='signature-missing';message='O serviço de assinatura não forneceu os tokens para consultar o catálogo. Isso não significa falta de senha da conta TikTok.';}
  else if(/rate.?limit/i.test(name+' '+text)||status===429){category='rate-limit';message='O serviço atingiu um limite de requisições. Aguarde antes de tentar novamente.';}
  else if(code&&/CERT|TLS|SIGNATURE/.test(code)){category='tls';message='Falha na validação do certificado. Confira data/hora do computador e a versão do Node.js.';}
+ else if(/CatalogAuthorizationError/.test(name)){category='access';message=status===401?'O catálogo exige autorização válida do provedor. Configure a chave no campo Acesso ao catálogo e confira se ela tem permissão para essa consulta.':'O provedor recusou acesso ao catálogo. Confira as permissões e os limites da chave; não é sua senha do TikTok.';}
  else if(status===401||status===402||(/lack of permission|PremiumFeature|unauthorized/i.test(name+' '+text))){category='access';message='Uma das fontes do conector recusou o acesso. Isso não confirma que a live esteja offline.';}
  else if(status===403||/\b403\b|forbidden/i.test(text)){category='blocked';message='O destino ou a rede recusou a requisição HTTP 403. A conexão não foi estabelecida.';}
  else if(code||/timeout|timed out/i.test(name+' '+text)){category='network';message='Não foi possível alcançar um dos serviços. Verifique a conexão e tente novamente após corrigir a rede.';}
@@ -18,7 +19,7 @@ function diagnostic(error){
 }
 export function connectionFailure(error){
  const entries=records(error).map(diagnostic);const diagnostics=entries.filter((e,i,a)=>a.findIndex(other=>JSON.stringify(other)===JSON.stringify(e))===i);
- const priority=['offline','signature-missing','rate-limit','tls','access','blocked','network','page-format','room','unknown'];let chosen;
+ const priority=['offline','rate-limit','tls','access','blocked','network','signature-missing','page-format','room','unknown'];let chosen;
  // An explicit root offline result is authoritative; an isolated failing fallback is not.
  if(diagnostics[0]?.category==='offline')chosen=diagnostics[0];else for(const category of priority.filter(x=>x!=='offline')){chosen=diagnostics.find(d=>d.category===category);if(chosen)break;}
  chosen??={category:'unknown',message:'Não foi possível conectar. Confirme o @, a live pública e o acesso à rede.'};

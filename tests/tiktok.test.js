@@ -4,3 +4,14 @@ test('connector requests public events, disables history and does not send crede
 test('failed real connector is never reported connected',async()=>{const statuses=[];class Offline extends Fake{async connect(){throw new Error('User offline');}}const bridge=new TikTokBridge({onStatus:s=>statuses.push(s),onGift:()=>{},onCatalog:()=>{},factory:()=>new Offline()});await bridge.connect('soou_jg');assert.equal(statuses.at(-1).state,'error');assert.ok(statuses.at(-1).message.includes('não está ao vivo'));assert.equal(statuses.some(s=>s.state==='connected'),false);});
 test('canceled connection cannot publish a late connected status',async()=>{let release;const statuses=[];class Delayed extends Fake{async connect(){return new Promise(r=>release=r);}}const bridge=new TikTokBridge({onStatus:s=>statuses.push(s),onGift:()=>{},onCatalog:()=>{},factory:()=>new Delayed()});const connecting=bridge.connect('soou_jg');await new Promise(r=>setImmediate(r));await bridge.disconnect();release({roomId:'123'});await connecting;assert.equal(statuses.some(s=>s.state==='connected'),false);});
 test('gift catalog failure is reported separately without changing live connection status',async()=>{let client;const statuses=[],catalogStatuses=[],events=[];class CatalogBlocked extends Fake{isConnected=false;async connect(){this.isConnected=true;return {roomId:'123'};}async fetchAvailableGifts(){const error=new Error('catalog blocked');error.name='SignatureMissingTokensError';this.emit('error',{exception:error});throw error;}}const bridge=new TikTokBridge({onStatus:s=>statuses.push(s),onGift:g=>events.push(g),onCatalog:()=>{},onCatalogStatus:s=>catalogStatuses.push(s),factory:()=>client=new CatalogBlocked()});await bridge.connect('soou_jg');assert.equal(statuses.at(-1).state,'connected');assert.equal(statuses.some(s=>s.state==='error'),false);assert.equal(catalogStatuses.at(-1).state,'error');assert.equal(catalogStatuses.at(-1).category,'signature-missing');client.emit('gift',{giftId:123});assert.equal(events.length,1);await bridge.disconnect();});
+test('reference catalog can be prepared without connecting or changing live state',async()=>{
+ let connects=0;const catalogStatuses=[],catalog=[];
+ const bridge=new TikTokBridge({
+  onStatus:()=>{throw new Error('Must not publish a live connection');},onGift:()=>{},onCatalog:x=>catalog.push(x),onCatalogStatus:x=>catalogStatuses.push(x),
+  factory:(name,opts)=>{assert.equal(name,'soou_jg');assert.equal(opts.processInitialData,false);return {
+   connect:()=>{connects++;},
+   apiClient:{gifts:{listWebcastGifts:async()=>({data:{code:200,gifts:[{giftId:5655,giftName:'Rose',diamondCount:1}]}})}}
+  };}
+ });
+ await bridge.catalog('soou_jg');assert.equal(connects,0);assert.equal(bridge.client,null);assert.equal(catalog[0][0].name,'Rose');assert.equal(catalogStatuses.at(-1).state,'ready');assert.equal(catalogStatuses.at(-1).source,'reference');
+});
