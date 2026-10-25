@@ -4,20 +4,20 @@ import {World} from './scene.js';
 import {AudioFX} from './audio.js';
 import {LiveClient} from './live.js';
 import {initSupportCards,renderSupportCards} from './support-cards.js';
-const $=id=>document.getElementById(id),race=new Race(),audio=new AudioFX();let world,team='r',toastUntil=0;
+import {bindGiftButtons} from './gift-buttons.js';
+const $=id=>document.getElementById(id),race=new Race(),audio=new AudioFX();let world,toastUntil=0;
 try{world=new World($('scene'),race);}catch(error){$('render-error').hidden=false;$('render-error').textContent='Não foi possível iniciar o WebGL. Ative a aceleração gráfica e recarregue a página.';console.error(error);}
 function toast(text){$('toast').textContent=text;toastUntil=performance.now()+3500;}
 race.addEventListener('gift',({detail:g})=>{world?.burst(g.team,g.kind==='special');audio.play(g.kind==='special');toast(`🎁 ${g.team==='r'?'Lula':'Flávio'} · Presente recebido — ${g.label} · +${(g.points*CONFIG.giftDistanceScale).toLocaleString('pt-BR')}% rumo à rampa!`);});
 race.addEventListener('finish',({detail})=>{$('winner').hidden=false;$('winner-name').textContent=detail.winner?`${detail.winner==='r'?'LULA':'FLÁVIO'} VENCEU!`:'RODADA EMPATADA!';if(detail.winner)world?.burst(detail.winner,true);audio.play(true);});
 race.addEventListener('reset',()=>{$('winner').hidden=true;toast('Nova rodada! A torcida faz a diferença.');});
-document.querySelectorAll('[data-team]').forEach(button=>button.onclick=()=>{team=button.dataset.team;document.querySelectorAll('[data-team]').forEach(b=>{b.classList.toggle('selected',b===button);b.setAttribute('aria-pressed',String(b===button));});$('app').dataset.team=team;});
-document.querySelectorAll('[data-gift]').forEach(button=>button.onclick=()=>race.gift(team,button.dataset.gift));
 $('pause').onclick=()=>race.toggle();$('reset').onclick=()=>race.reset();$('sound').onclick=async()=>{try{const on=await audio.toggle();$('sound').textContent=on?'SOM ON':'SOM OFF';$('sound').setAttribute('aria-pressed',String(on));}catch{toast('Áudio indisponível neste navegador.');}};
 // Both local simulation and real server events share the same game presentation.
 const gifts=new EventTarget();gifts.addEventListener('gift',({detail})=>{if(detail&&typeof detail==='object')race.gift(detail.team,detail.kind);});
 window.planalto={gifts,config:CONFIG,loadModel:async(team,url)=>{if(!['r','g'].includes(team)||!world)return false;const ok=await world.loadModel(team,url);toast(ok?'Modelo GLB carregado.':'Falha no GLB: personagem provisório mantido.');return ok;}};
 initSupportCards();
 let info=null,hydrated=false;
+bindGiftButtons(race,()=>info?.config.rules??[]);
 const live=new LiveClient(race,{onInfo:data=>{
  info=data;renderSupportCards(data.config.rules,data.catalog);const connected=data.status.state==='connected';$('connection-status').textContent=data.status.message+(data.pending?` · ${data.pending} presentes na fila`:'');$('live-label').textContent=connected?'TIKTOK AO VIVO':'TESTE LOCAL';$('integration-status').textContent=connected?'EVENTOS DA LIVE CONECTADA':'SIMULAÇÃO LOCAL • TIKTOK DESCONECTADO';
  $('connect-live').disabled=['connecting','connected'].includes(data.status.state);$('save-live').disabled=data.status.state==='connecting';
@@ -32,5 +32,5 @@ $('connect-live').onclick=()=>action($('connect-live'),()=>live.request('connect
 $('disconnect-live').onclick=()=>action($('disconnect-live'),()=>live.request('disconnect'));
 $('refresh-gifts').onclick=()=>action($('refresh-gifts'),()=>live.request('catalog'));
 for(const id of ['r','g','r-special','g-special'])$('catalog-'+id).onchange=()=>{const gift=info?.catalog.find(g=>$('catalog-'+id).value===g.id);if(gift){$('gift-id-'+id).value=gift.id;$('gift-name-'+id).value=gift.name;}};
-const capture=new URLSearchParams(location.search).get('live')==='1';if(capture){document.body.classList.add('capture');const fit=()=>document.documentElement.style.setProperty('--capture-scale',String(Math.min(innerWidth/540,innerHeight/960)));addEventListener('resize',fit);fit();}
+const capture=new URLSearchParams(location.search).get('live')==='1';if(capture){document.body.classList.add('capture');for(const button of document.querySelectorAll('[data-gift-team]')){button.disabled=true;button.removeAttribute('aria-label');}const fit=()=>document.documentElement.style.setProperty('--capture-scale',String(Math.min(innerWidth/540,innerHeight/960)));addEventListener('resize',fit);fit();}
 let previous=performance.now();function frame(now){const dt=Math.min((now-previous)/1000,.1);previous=now;if(!live.serverDriven)race.update(dt);world?.update(dt);$('timer').textContent=`${String(Math.floor(Math.ceil(race.time)/60)).padStart(2,'0')}:${String(Math.ceil(race.time)%60).padStart(2,'0')}`;$('round').textContent=String(race.round).padStart(2,'0');$('state').textContent=race.ended?'FINALIZADA':race.paused?'PAUSADA':'NA PISTA';$('pause').textContent=race.paused?'▶ CONTINUAR':'Ⅱ PAUSAR';for(const id of ['r','g']){const r=race.runners[id],percent=Math.min(100,r.distance/CONFIG.distance*100);$('score-'+id).textContent=r.score;$('progress-'+id).style.width=percent+'%';$('distance-'+id).textContent=`${percent.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}% DO PERCURSO${r.boost?' • TURBO':''}`;}if(now>toastUntil)$('toast').textContent=race.ended?(race.autoRestart?`Nova rodada em ${Math.max(0,Math.ceil(race.restartIn))}s`:'Rodada encerrada • corra novamente'):race.paused?'Corrida pausada':race.runners.r.distance===race.runners.g.distance?(info?.status.state==='connected'?'Envie o presente mostrado abaixo do seu candidato.':'Teste local · configure os presentes no painel abaixo.'):`${race.runners.r.distance>race.runners.g.distance?'Lula':'Flávio'} na frente • rosas e presentes simulados fazem avançar`;requestAnimationFrame(frame);}requestAnimationFrame(frame);

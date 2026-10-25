@@ -93,3 +93,7 @@ O placar mostra o retrato ilustrado de cada candidato acima da imagem do present
 ## Rosa e dois especiais
 
 Cada corredor agora tem dois espaços de presente abaixo do retrato: NORMAL e ESPECIAL. Após conectar à live e carregar o catálogo, o botão CONFIGURAR ROSA + PARES IGUAIS salva quatro IDs reais: Rosa/Rose para Lula, outro presente do mesmo custo para Flávio e dois especiais distintos de igual custo. O par especial é o par de menor preço confirmado acima da rosa, para não escolher silenciosamente presentes mais caros. Os dois normais usam efeito de 1 ponto; os dois especiais usam 25 pontos por unidade. É possível ajustar pelo painel e salvar manualmente; pares com preços conhecidos diferentes são rejeitados. Sem catálogo ou par disponível, a configuração automática avisa e não inventa IDs, preços ou imagens. Nada disso confirma a conexão real, ainda pendente de teste na live.
+
+## Posição dos presentes e testes diretos
+
+O placar superior voltou a nomes, números e progresso, sem retratos. A indicação de presentes fica abaixo da pista, com uma coluna para Lula e outra para Flávio, cada uma com normal e especial. Não existe seleção de candidato. No painel, clicar em um dos quatro presentes simula diretamente o corredor e o efeito daquele espaço. Na tela de transmissão esses botões não são interativos, e as instruções de teste ficam ocultas; o público envia o presente real no TikTok. A configuração por IDs continua no painel de conexão.

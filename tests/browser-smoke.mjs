@@ -6,11 +6,11 @@ const errors=[];
 try{
  const controller=await browser.newPage({viewport:{width:540,height:1300}});controller.on('pageerror',e=>errors.push(e.message));
  await controller.goto(base);await controller.waitForFunction(()=>document.getElementById('connection-status').textContent.includes('Modo de teste'));
- assert.equal(await controller.locator('canvas').count(),1);assert.equal(await controller.locator('#render-error').isVisible(),false);assert.equal(await controller.locator('#live-username').inputValue(),'soou_jg');
+ assert.equal(await controller.locator('[data-team]').count(),0);assert.equal(await controller.locator('.scores .candidate-portrait').count(),0);assert.equal(await controller.locator('canvas').count(),1);assert.equal(await controller.locator('#render-error').isVisible(),false);assert.equal(await controller.locator('#live-username').inputValue(),'soou_jg');
  const capture=await browser.newPage({viewport:{width:1080,height:1920}});capture.on('pageerror',e=>errors.push(e.message));await capture.goto(base+'/?live=1');await capture.waitForFunction(()=>document.body.classList.contains('capture'));
  assert.equal(await capture.locator('#live-panel').isVisible(),false);assert.equal(await capture.locator('.controls').isVisible(),false);
- await controller.click('#reset');await controller.click('[data-gift="turbo"]');
- await controller.waitForFunction(()=>document.getElementById('score-r').textContent==='10');await capture.waitForFunction(()=>document.getElementById('score-r').textContent==='10');
+ await controller.click('#reset');await controller.click('[data-gift-team="r"][data-gift-slot="special"]');
+ await controller.waitForFunction(()=>document.getElementById('score-r').textContent==='25');await capture.waitForFunction(()=>document.getElementById('score-r').textContent==='25');
  await controller.click('#pause');await controller.waitForFunction(()=>document.getElementById('state').textContent==='PAUSADA');await capture.waitForFunction(()=>document.getElementById('state').textContent==='PAUSADA');const time=await controller.locator('#timer').textContent();await controller.waitForTimeout(1100);assert.equal(await controller.locator('#timer').textContent(),time);
  assert.equal(await capture.evaluate(()=>Math.round(document.getElementById('app').getBoundingClientRect().width)),1080);assert.equal(await capture.evaluate(()=>Math.round(document.getElementById('app').getBoundingClientRect().height)),1920);
  await capture.screenshot({path:'/tmp/planalto-live-1080x1920.png'});
