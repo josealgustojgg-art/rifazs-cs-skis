@@ -6,6 +6,7 @@ function diagnostic(error){
  const code=codes.has(error.code)?error.code:undefined;const route=routes[error.config?.routeId]??(/euler|sign|signature/i.test(name+' '+text)?'Serviço de assinatura':'Conexão TikTok');
  let category='unknown',message='O conector não informou uma causa conclusiva.';
  if(/UserOfflineError/.test(name)||/^(User offline|User not live)$/i.test(text.trim())){category='offline';message='A conta foi informada pelo conector como fora do ar.';}
+ else if(/SignatureMissingTokensError/.test(name)){category='signature-missing';message='O serviço de assinatura não forneceu os tokens para consultar o catálogo. Isso não significa falta de senha da conta TikTok.';}
  else if(/rate.?limit/i.test(name+' '+text)||status===429){category='rate-limit';message='O serviço atingiu um limite de requisições. Aguarde antes de tentar novamente.';}
  else if(code&&/CERT|TLS|SIGNATURE/.test(code)){category='tls';message='Falha na validação do certificado. Confira data/hora do computador e a versão do Node.js.';}
  else if(status===401||status===402||(/lack of permission|PremiumFeature|unauthorized/i.test(name+' '+text))){category='access';message='Uma das fontes do conector recusou o acesso. Isso não confirma que a live esteja offline.';}
@@ -17,7 +18,7 @@ function diagnostic(error){
 }
 export function connectionFailure(error){
  const entries=records(error).map(diagnostic);const diagnostics=entries.filter((e,i,a)=>a.findIndex(other=>JSON.stringify(other)===JSON.stringify(e))===i);
- const priority=['offline','rate-limit','tls','access','blocked','network','page-format','room','unknown'];let chosen;
+ const priority=['offline','signature-missing','rate-limit','tls','access','blocked','network','page-format','room','unknown'];let chosen;
  // An explicit root offline result is authoritative; an isolated failing fallback is not.
  if(diagnostics[0]?.category==='offline')chosen=diagnostics[0];else for(const category of priority.filter(x=>x!=='offline')){chosen=diagnostics.find(d=>d.category===category);if(chosen)break;}
  chosen??={category:'unknown',message:'Não foi possível conectar. Confirme o @, a live pública e o acesso à rede.'};

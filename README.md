@@ -101,3 +101,11 @@ O placar superior voltou a nomes, números e progresso, sem retratos. A indicaç
 ## Diagnóstico de conexão
 
 A prévia do LIVE Studio ainda não é uma live pública. Primeiro inicie a transmissão; depois conecte o jogo ao @. O painel e o terminal agora distinguem erros de sala não localizada, conta explicitamente offline, HTTP 403, limites, rede e certificados. Abra Detalhes da conexão para ver as fontes que falharam. O diagnóstico usa campos conhecidos, sem expor mensagens brutas, URLs com parâmetros, cabeçalhos, cookies ou credenciais. Uma falha genérica ao localizar a sala não prova que a conta está offline.
+
+## Falha real identificada no catálogo
+
+No teste feito pelo usuário no Windows, o conector mostrou CONEXAO OK e, ao consultar os presentes, SignatureMissingTokensError. O endpoint gift/list da biblioteca exige assinatura HTTP do provedor externo, diferente da conexão WebSocket da live. Essa assinatura continua sendo um requisito externo; não foi desativada e não foram solicitados senha ou cookies da conta. Conexão e catálogo agora têm estados separados, para uma falha no catálogo não indicar que a live desconectou.
+
+Como alternativa parcial, presentes que chegarem naturalmente pela live são identificados pelos metadados do próprio evento v3 (gift.id, gift.name, gift.diamondCount e gift.image.urlList). Eles aparecem na lista de seleção, com indicação de lista parcial; isso não fornece antecipadamente o catálogo completo e não deve ser motivo para pedir presentes de teste. Não se inventam preços, IDs ou imagens. Configuração de quatro presentes exige quatro metadados reais compatíveis, via catálogo disponível ou eventos observados. Mensagens v3 também usam gift.type e user.id, agora tratados corretamente na deduplicação de sequências.
+
+A live foi encerrada pelo usuário após um aviso do TikTok sobre transmissão parada. Não é necessário reabri-la para rodar npm test ou os testes locais no Chromium. A recepção de presentes reais ainda não foi validada. Build e 46 testes automatizados passaram com eventos simulados.

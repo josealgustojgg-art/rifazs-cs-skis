@@ -9,6 +9,7 @@ import {GiftRouter,validateRules,normalizeUsername} from './gifts.js';
 import {TikTokBridge} from './tiktok.js';
 import {resolveStaticPath} from './paths.js';
 import {balancedGiftSelection} from './gift-pairs.js';
+import {observedGift,mergeGiftMetadata} from './observed-gifts.js';
 
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const file=process.env.PLANALTO_CONFIG_PATH?resolve(process.env.PLANALTO_CONFIG_PATH):resolve(root,'.planalto-live.json'),dist=resolve(root,'dist');
@@ -16,16 +17,17 @@ let config={username:'soou_jg',rules:[]};
 try{const saved=JSON.parse(await readFile(file,'utf8'));config={username:saved.username?normalizeUsername(saved.username):'',rules:validateRules(saved.rules??[])};}catch(error){if(error.code!=='ENOENT')console.warn('Configuração local inválida; configure novamente pelo painel.');}
 const port=Number(process.env.PLANALTO_PORT??8080);if(!Number.isInteger(port)||port<1024||port>65535)throw new Error('PLANALTO_PORT inválida.');
 const host='127.0.0.1',race=new Race(),router=new GiftRouter();
-let status={state:'offline',message:'Modo de teste local. Nenhuma live conectada.'},catalog=[],pending=[],lastGift=null,closing=false;
+let status={state:'offline',message:'Modo de teste local. Nenhuma live conectada.'},catalog=[],observedIds=new Set(),catalogStatus={state:'idle',message:'Conecte à live para carregar o catálogo.'},pending=[],lastGift=null,closing=false;
 const wss=new WebSocketServer({noServer:true,maxPayload:8192});
 const send=(ws,value)=>{if(ws.readyState===WebSocket.OPEN&&ws.bufferedAmount<1024*1024)ws.send(JSON.stringify(value));};
 const broadcast=value=>{for(const ws of wss.clients)send(ws,value);};
 function snapshot(){return {round:race.round,time:race.time,ended:race.ended,paused:race.paused,winner:race.winner??null,restartIn:race.restartIn,runners:race.runners,autoRestart:true,duration:CONFIG.duration};}
-function info(){return {status,config,catalog,pending:pending.length,lastGift};}
+function info(){return {status,config,catalog,catalogStatus,observedCount:observedIds.size,pending:pending.length,lastGift};}
 function publish(){broadcast({type:'connection',...info()});}
 function grant(gift){if(race.paused||race.ended){if(pending.length<1000){pending.push(gift);publish();}else{status={...status,message:'Fila de presentes cheia. Pause a conexão para verificar o jogo.'};publish();}return;}race.gift(gift.team,gift.kind,gift.quantity);}
 for(const type of ['gift','finish','reset'])race.addEventListener(type,event=>broadcast({type:'event',event:type,detail:event.detail??null}));
-const bridge=new TikTokBridge({onStatus:value=>{status=value;publish();},onCatalog:value=>{catalog=value;publish();},onGift:data=>{
+const bridge=new TikTokBridge({onStatus:value=>{status=value;publish();},onCatalog:value=>{catalog=mergeGiftMetadata(catalog,value);publish();},onCatalogStatus:value=>{catalogStatus=value;publish();},onGift:data=>{
+ const metadata=observedGift(data);if(metadata){observedIds.add(metadata.id);catalog=mergeGiftMetadata(catalog,[metadata]);publish();}
  const gift=router.route(data,config.rules);if(!gift)return;lastGift={name:gift.name,team:gift.team,quantity:gift.quantity,at:Date.now()};grant(gift);publish();
 }});
 function trustedOrigin(req){if(!req.headers.origin)return true;try{const u=new URL(req.headers.origin);return ['127.0.0.1','localhost'].includes(u.hostname)&&['8080',String(port),'5173'].includes(u.port)&&u.protocol==='http:';}catch{return false;}}
@@ -53,7 +55,7 @@ const server=http.createServer(async(req,res)=>{
    if(pathname==='/api/connect'){
     if(status.state==='connecting'||status.state==='connected')throw new Error('Uma conexão já está ativa. Desconecte antes de trocar a conta.');
     if(!config.username)throw new Error('Salve o @ da conta antes de conectar.');
-    router.reset();catalog=[];void bridge.connect(config.username).catch(()=>{status={state:'error',message:'Não foi possível iniciar o conector.'};publish();});json(res,202,{ok:true});return;
+    router.reset();catalog=[];observedIds.clear();void bridge.connect(config.username).catch(()=>{status={state:'error',message:'Não foi possível iniciar o conector.'};publish();});json(res,202,{ok:true});return;
    }
    if(pathname==='/api/disconnect'){await bridge.disconnect();json(res,200,{ok:true});return;}
    if(pathname==='/api/catalog'){await bridge.catalog();json(res,200,{ok:true});return;}

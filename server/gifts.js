@@ -23,11 +23,11 @@ export class GiftRouter {
  route(data,rules) {
   const now=this.clock();for(const [id,expiry]of this.seen)if(expiry<=now)this.seen.delete(id);
   const id=String(data.giftId??'');const rule=rules.find(r=>r.id===id);if(!rule)return null;
-  const type=Number(data.giftDetails?.giftType??data.giftType??data.extendedGiftInfo?.type??0);
+  const type=Number(data.gift?.type??data.giftDetails?.giftType??data.giftType??data.extendedGiftInfo?.type??0);
   // Streaks contain cumulative counts: award only the final event, once.
   if(type===1&&data.repeatEnd!==true&&data.repeatEnd!==1)return null;
   const quantity=Number(data.repeatCount??1);if(!Number.isSafeInteger(quantity)||quantity<1||quantity>100000)return null;
-  const user=String(data.user?.userId??data.user?.uniqueId??data.userId??'');
+  const user=String(data.user?.id??data.user?.userId??data.user?.uniqueId??data.userId??'');
   const messageId=String(data.common?.msgId??data.msgId??'');
   const group=String(data.groupId??'');
   const key=type===1&&group&&group!=='0'?`s:${user}:${id}:${group}`:messageId&&messageId!=='0'?`m:${messageId}`:null;
