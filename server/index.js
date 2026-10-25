@@ -8,6 +8,7 @@ import {Race,CONFIG} from '../src/game.js';
 import {GiftRouter,validateRules,normalizeUsername} from './gifts.js';
 import {TikTokBridge} from './tiktok.js';
 import {resolveStaticPath} from './paths.js';
+import {balancedGiftSelection} from './gift-pairs.js';
 
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const file=process.env.PLANALTO_CONFIG_PATH?resolve(process.env.PLANALTO_CONFIG_PATH):resolve(root,'.planalto-live.json'),dist=resolve(root,'dist');
@@ -39,10 +40,15 @@ const server=http.createServer(async(req,res)=>{
   if(req.method==='POST'&&pathname.startsWith('/api/')){
    const input=await body(req);
    if(pathname==='/api/config'){
-    const username=input.username?normalizeUsername(input.username):'';const rules=validateRules(input.rules);
+    const username=input.username?normalizeUsername(input.username):'';const rules=validateRules(Array.isArray(input.rules)?input.rules.map(rule=>{const item=catalog.find(g=>g.id===String(rule.id));return item?{...rule,name:item.name,coins:item.coins,imageUrl:item.imageUrl}:rule;}):input.rules);
     if(status.state==='connected'&&username!==config.username)throw new Error('Desconecte antes de trocar o @ da conta.');
     if(status.state==='connecting')throw new Error('Aguarde a conexão antes de salvar.');
     await writeFile(file+'.tmp',JSON.stringify({username,rules},null,2),{mode:0o600});await rename(file+'.tmp',file);config={username,rules};publish();json(res,200,{ok:true});return;
+   }
+   if(pathname==='/api/auto-gifts'){
+    if(!catalog.length)throw new Error('Conecte à live e carregue o catálogo antes de configurar os pares.');
+    const rules=balancedGiftSelection(catalog);
+    await writeFile(file+'.tmp',JSON.stringify({...config,rules},null,2),{mode:0o600});await rename(file+'.tmp',file);config={...config,rules};publish();json(res,200,{ok:true,config});return;
    }
    if(pathname==='/api/connect'){
     if(status.state==='connecting'||status.state==='connected')throw new Error('Uma conexão já está ativa. Desconecte antes de trocar a conta.');

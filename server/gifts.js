@@ -1,13 +1,16 @@
 import {safeGiftImage,giftCoins} from './gift-images.js';
 const KINDS = new Set(['rose','heart','turbo','special']);
 export function validateRules(value) {
- if(!Array.isArray(value)||value.length>30)throw new Error('Configure no máximo 30 presentes.');
- const ids=new Set();return value.map(rule=>{
+ if(!Array.isArray(value)||value.length>4)throw new Error('Configure no máximo quatro presentes: normal e especial para cada corredor.');
+ const ids=new Set(),slots=new Set();const rules=value.map(rule=>{
   const id=String(rule.id??'').trim(),name=String(rule.name??'').trim();
   if(!/^\d{1,12}$/.test(id)||Number(id)<1||ids.has(id))throw new Error('Cada presente precisa de um ID numérico único.');
   if(!['r','g'].includes(rule.team)||!KINDS.has(rule.kind))throw new Error('Corredor ou efeito inválido.');
-  ids.add(id);return {id,name:name.slice(0,80)||`Presente ${id}`,team:rule.team,kind:rule.kind,imageUrl:safeGiftImage(rule.imageUrl),coins:giftCoins(rule.coins)};
+  const slot=rule.slot??(rule.kind==='special'?'special':'normal');if(!['normal','special'].includes(slot)||slots.has(rule.team+':'+slot))throw new Error('Use apenas um presente normal e um especial para cada corredor.');slots.add(rule.team+':'+slot);
+  ids.add(id);return {id,name:name.slice(0,80)||`Presente ${id}`,team:rule.team,slot,kind:rule.kind,imageUrl:safeGiftImage(rule.imageUrl),coins:giftCoins(rule.coins)};
  });
+ for(const slot of ['normal','special']){const a=rules.find(r=>r.team==='r'&&r.slot===slot),b=rules.find(r=>r.team==='g'&&r.slot===slot);if(a?.coins!=null&&b?.coins!=null&&a.coins!==b.coins)throw new Error(`Os presentes ${slot==='normal'?'normais':'especiais'} dos dois corredores precisam ter o mesmo valor em moedas.`);}
+ return rules;
 }
 export function normalizeUsername(value) {
  const username=String(value??'').trim().replace(/^@/,'');

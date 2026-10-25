@@ -89,3 +89,7 @@ A checagem de arquivos estáticos usa caminhos nativos do sistema, incluindo bar
 ## Cartões visuais de presentes
 
 O placar mostra o retrato ilustrado de cada candidato acima da imagem do presente atribuído a ele. Ao selecionar um item no catálogo e salvar, são preservados ID, nome, imagem HTTPS e custo informado. O público vê o presente correspondente abaixo do retrato, sem precisar selecionar candidato. Imagem ausente ou inacessível mantém um ícone neutro e o nome; sem mapeamento aparece Presente não configurado. As cabeças continuam sendo ilustrações, não fotografias. `node tests/support-cards-smoke.mjs` verifica posição dos retratos, miniaturas com fixtures, persistência e fallback no Chromium.
+
+## Rosa e dois especiais
+
+Cada corredor agora tem dois espaços de presente abaixo do retrato: NORMAL e ESPECIAL. Após conectar à live e carregar o catálogo, o botão CONFIGURAR ROSA + PARES IGUAIS salva quatro IDs reais: Rosa/Rose para Lula, outro presente do mesmo custo para Flávio e dois especiais distintos de igual custo. O par especial é o par de menor preço confirmado acima da rosa, para não escolher silenciosamente presentes mais caros. Os dois normais usam efeito de 1 ponto; os dois especiais usam 25 pontos por unidade. É possível ajustar pelo painel e salvar manualmente; pares com preços conhecidos diferentes são rejeitados. Sem catálogo ou par disponível, a configuração automática avisa e não inventa IDs, preços ou imagens. Nada disso confirma a conexão real, ainda pendente de teste na live.
