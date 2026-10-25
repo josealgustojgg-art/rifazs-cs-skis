@@ -9,6 +9,7 @@ import {GiftRouter,validateRules,normalizeUsername} from './gifts.js';
 import {TikTokBridge} from './tiktok.js';
 import {TikTokLiveConnection} from 'tiktok-live-connector';
 import {ProviderAccess} from './provider-access.js';
+import {importGiftCatalog} from './import-catalog.js';
 import {resolveStaticPath} from './paths.js';
 import {balancedGiftSelection} from './gift-pairs.js';
 import {observedGift,mergeGiftMetadata} from './observed-gifts.js';
@@ -19,7 +20,8 @@ let config={username:'soou_jg',rules:[]};
 try{const saved=JSON.parse(await readFile(file,'utf8'));config={username:saved.username?normalizeUsername(saved.username):'',rules:validateRules(saved.rules??[])};}catch(error){if(error.code!=='ENOENT')console.warn('Configuração local inválida; configure novamente pelo painel.');}
 const port=Number(process.env.PLANALTO_PORT??8080);if(!Number.isInteger(port)||port<1024||port>65535)throw new Error('PLANALTO_PORT inválida.');
 const host='127.0.0.1',race=new Race(),router=new GiftRouter(),provider=new ProviderAccess();
-let status={state:'offline',message:'Modo de teste local. Nenhuma live conectada.'},catalog=[],observedIds=new Set(),catalogStatus={state:'idle',message:'Conecte à live para carregar o catálogo.'},pending=[],lastGift=null,closing=false;
+let status={state:'offline',message:'Modo de teste local. Nenhuma live conectada.'},catalog=[],importedCatalog=false,observedIds=new Set(),catalogStatus={state:'idle',message:'Conecte à live para carregar o catálogo.'},pending=[],lastGift=null,closing=false;
+try{catalog=importGiftCatalog(JSON.parse(await readFile(file+'.catalog.json','utf8')));importedCatalog=true;catalogStatus={state:'ready',source:'imported',message:`Lista importada restaurada: ${catalog.length} presentes.`};}catch(error){if(error.code!=='ENOENT')console.warn('Lista importada não pôde ser restaurada. Importe novamente pelo painel.');}
 const wss=new WebSocketServer({noServer:true,maxPayload:8192});
 const send=(ws,value)=>{if(ws.readyState===WebSocket.OPEN&&ws.bufferedAmount<1024*1024)ws.send(JSON.stringify(value));};
 const broadcast=value=>{for(const ws of wss.clients)send(ws,value);};
@@ -28,21 +30,25 @@ function info(){return {status,config,catalog,catalogStatus,provider:provider.su
 function publish(){broadcast({type:'connection',...info()});}
 function grant(gift){if(race.paused||race.ended){if(pending.length<1000){pending.push(gift);publish();}else{status={...status,message:'Fila de presentes cheia. Pause a conexão para verificar o jogo.'};publish();}return;}race.gift(gift.team,gift.kind,gift.quantity);}
 for(const type of ['gift','finish','reset'])race.addEventListener(type,event=>broadcast({type:'event',event:type,detail:event.detail??null}));
-const bridge=new TikTokBridge({factory:(name,options)=>new TikTokLiveConnection(name,{...options,eulerApiInstance:provider.client()}),onStatus:value=>{status=value;publish();},onCatalog:value=>{catalog=mergeGiftMetadata(catalog,value);publish();},onCatalogStatus:value=>{catalogStatus=value;publish();},onGift:data=>{
+const bridge=new TikTokBridge({factory:(name,options)=>new TikTokLiveConnection(name,provider.summary().configured?{...options,eulerApiInstance:provider.client()}:options),fetchCatalogOnConnect:()=>!importedCatalog,onStatus:value=>{status=value;publish();},onCatalog:value=>{importedCatalog=false;catalog=mergeGiftMetadata(catalog,value);publish();},onCatalogStatus:value=>{catalogStatus=importedCatalog&&value.state==='idle'?{state:'ready',source:'imported',message:`Lista importada pronta: ${catalog.length} presentes.`}:value;publish();},onGift:data=>{
  const metadata=observedGift(data);if(metadata){observedIds.add(metadata.id);catalog=mergeGiftMetadata(catalog,[metadata]);publish();}
  const gift=router.route(data,config.rules);if(!gift)return;lastGift={name:gift.name,team:gift.team,quantity:gift.quantity,at:Date.now()};grant(gift);publish();
 }});
 function trustedOrigin(req){if(!req.headers.origin)return true;try{const u=new URL(req.headers.origin);return ['127.0.0.1','localhost'].includes(u.hostname)&&['8080',String(port),'5173'].includes(u.port)&&u.protocol==='http:';}catch{return false;}}
 function safeHost(req){return [`127.0.0.1:${port}`,`localhost:${port}`].includes(req.headers.host);}
 function json(res,code,data){res.writeHead(code,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(data));}
-async function body(req){if(!String(req.headers['content-type']).startsWith('application/json'))throw new Error('Use JSON.');let text='';for await(const chunk of req){text+=chunk;if(Buffer.byteLength(text)>8192)throw new Error('Pedido muito grande.');}return JSON.parse(text||'{}');}
+async function body(req,limit=8192){if(!String(req.headers['content-type']).startsWith('application/json'))throw new Error('Use JSON.');let text='';for await(const chunk of req){text+=chunk;if(Buffer.byteLength(text)>limit)throw new Error('Pedido muito grande.');}return JSON.parse(text||'{}');}
 const server=http.createServer(async(req,res)=>{
  if(!safeHost(req)||!trustedOrigin(req)){json(res,403,{error:'Acesso permitido somente pelo painel local.'});return;}
  const pathname=new URL(req.url,'http://localhost').pathname;
  try{
   if(req.method==='GET'&&pathname==='/api/state'){json(res,200,{...info(),race:snapshot()});return;}
   if(req.method==='POST'&&pathname.startsWith('/api/')){
-   const input=await body(req);
+   const input=await body(req,pathname==='/api/import-catalog'?16*1024*1024:8192);
+   if(pathname==='/api/import-catalog'){
+    const items=importGiftCatalog(input.catalog);
+    await writeFile(file+'.catalog.json',JSON.stringify(items),{mode:0o600});catalog=items;importedCatalog=true;catalogStatus={state:'ready',source:'imported',message:`Lista importada: ${items.length} presentes. Confira os preços e a disponibilidade na sua conta TikTok.`};publish();json(res,200,{ok:true,count:items.length});return;
+   }
    if(pathname==='/api/provider'){
     if(status.state==='connected'||status.state==='connecting')throw new Error('Desconecte a live antes de alterar o acesso ao provedor.');
     if(typeof input.apiKey!=='string'||!input.apiKey.trim()||input.apiKey.length>4096||/[\r\n]/.test(input.apiKey))throw new Error('Informe a chave no campo protegido.');
@@ -62,7 +68,7 @@ const server=http.createServer(async(req,res)=>{
    if(pathname==='/api/connect'){
     if(status.state==='connecting'||status.state==='connected')throw new Error('Uma conexão já está ativa. Desconecte antes de trocar a conta.');
     if(!config.username)throw new Error('Salve o @ da conta antes de conectar.');
-    router.reset();catalog=[];observedIds.clear();void bridge.connect(config.username).catch(()=>{status={state:'error',message:'Não foi possível iniciar o conector.'};publish();});json(res,202,{ok:true});return;
+    router.reset();observedIds.clear();void bridge.connect(config.username).catch(()=>{status={state:'error',message:'Não foi possível iniciar o conector.'};publish();});json(res,202,{ok:true});return;
    }
    if(pathname==='/api/disconnect'){await bridge.disconnect();json(res,200,{ok:true});return;}
    if(pathname==='/api/catalog'){await bridge.catalog(config.username||'soou_jg');json(res,200,{ok:true});return;}

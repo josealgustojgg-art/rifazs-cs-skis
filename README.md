@@ -1,46 +1,62 @@
 # Corrida do Planalto 2026
 
-Jogo fictício de entretenimento em navegador. Não representa votos, pesquisas ou resultados eleitorais. Sem apostas ou prêmios. Rostos são ilustrações geradas por IA sobre corpos 3D, não fotografias ou modelos faciais 3D personalizados.
+Jogo fictício de entretenimento, sem apostas ou prêmios. Não representa votos, pesquisa ou resultados eleitorais. Rostos são ilustrações geradas por IA sobre corpos 3D, não fotografias ou modelos faciais personalizados.
 
-## Começar no Windows
+## Windows 11: iniciar
 
-Instale Node.js 24 LTS em https://nodejs.org, extraia todo o pacote e abra `INICIAR-WINDOWS.bat`. Na primeira execução, ele instala as dependências de produção pelo lockfile; internet é necessária. O jogo compilado já vem no pacote. Deixe a janela aberta.
+Instale Node.js 24 LTS, extraia o ZIP e abra `INICIAR-WINDOWS.bat`. Na primeira execução ele instala as dependências e abre o jogo; mantenha a janela do servidor aberta. Se o Windows bloquear o .bat, não desative a proteção: abra CMD na pasta que contém package.json e execute:
 
-- Painel: `http://127.0.0.1:8080`
-- Tela de transmissão: `http://127.0.0.1:8080/?live=1`
+```bat
+npm ci --omit=dev
+npm run start:open
+```
 
-A tela de transmissão ocupa 9:16 e esconde os controles. Use uma fonte de navegador em 1080 × 1920 no OBS, se disponível, ou capture a janela no software de transmissão. O painel e a fonte compartilham a mesma corrida no servidor; não são partidas independentes. Som precisa ser ativado por uma interação no navegador que reproduz a cena; capturar uma janela com som ativo é uma alternativa quando a fonte não permite essa interação.
+Painel: `http://127.0.0.1:8080`. Tela 9:16: `http://127.0.0.1:8080/?live=1`. O painel e a captura compartilham a mesma corrida. Use uma fonte de navegador em 1080 × 1920 quando suportada, ou captura da janela no software de transmissão. O servidor só aceita conexões de loopback; não exponha o painel na internet. `PLANALTO_PORT` altera a porta.
 
-## Conectar a live
+## Configuração sem catálogo PRO
 
-1. Abra o painel e localize **Conexão TikTok**. O @ `soou_jg` vem preenchido; salve caso o altere.
-2. Inicie uma live pública no TikTok e clique **Conectar live**. Isso apenas recebe eventos: não inicia a live, não transmite vídeo e não envia mensagens ao público.
-3. Se conectar, o catálogo de presentes é carregado; se necessário clique **Buscar catálogo**.
-4. Escolha um presente para Lula e outro distinto para Flávio. Os IDs precisam ser reais, obtidos do catálogo. O mesmo ID não pode ser atribuído aos dois.
-5. Compare o custo em moedas dos presentes e escolha valores iguais para equilíbrio. O preço é definido pelo TikTok; o jogo só configura pontos/avanço. Salve os presentes.
-6. Confira a legenda do jogo. Presentes não mapeados são ignorados. Uma rosa não possui duas variantes automaticamente: use dois presentes distintos.
-7. Apenas quando a conexão estiver de fato estabelecida, o topo indica **TikTok ao vivo**. Os botões do painel são simulações locais, para teste.
+A conexão básica pelo @soou_jg funcionou no diagnóstico do usuário. A consulta de catálogo falhou com SignatureMissingTokensError; o catálogo de referência retornou HTTP 401. A [especificação oficial](https://github.com/EulerStream/Euler-Api-Sdk/blob/108cb5c19fd229e635b1c426885ad2283b41f078/spec/openapi.json) declara `/webcast/gifts/catalog` com escopo PRO. A conta Community não ganha esse acesso apenas criando uma chave.
 
-O catálogo depende do acesso do conector. Caso indisponível, não invente IDs: obtenha os IDs verdadeiros de uma fonte confiável do evento antes de salvar manualmente. Até haver mapeamento, eventos não movimentam os corredores.
+**Não é obrigatório consultar esse catálogo para rotear os presentes.** Os quatro IDs podem ser cadastrados uma vez a partir de metadados reais, e a corrida recebe os eventos automaticamente depois. A versão atual permite importar uma lista sem esse serviço pago:
 
-Não há senha, cookie de login ou chave no frontend. O servidor usa `tiktok-live-connector` 2.5.0 e o fluxo público de leitura, sem autenticação de conta. A biblioteca é de terceiros, baseada em protocolo não oficial; TikTok pode alterar ou bloquear o acesso. A assinatura WebSocket depende do Euler Stream, com limites comunitários segundo a documentação da biblioteca. Não se garante disponibilidade, gratuidade ilimitada ou funcionamento em qualquer conta/região. Nenhuma integração oficial é alegada.
+1. Com a transmissão encerrada, obtenha pelo seu navegador TikTok a resposta JSON da lista de presentes. Quando o painel de presentes carregar uma requisição `gift/list`, a resposta normalmente contém `data.gifts`. A disponibilidade dessa resposta depende da interface que o TikTok apresentar.
+2. Use apenas a resposta JSON. Não use HAR, cookies, cabeçalhos, tokens ou chaves. Não é necessário enviar a resposta ao chat.
+3. No jogo, abra **Importar lista do TikTok · sem catálogo PRO**, cole a resposta e clique **Importar lista de presentes**.
+4. Clique **Configurar rosa + pares iguais**. O jogo escolhe Rosa/Rose para Lula, outro presente distinto do mesmo custo para Flávio e dois especiais distintos de igual preço, no menor patamar confirmado acima da rosa.
+5. Confira os quatro nomes, preços e imagens. Uma lista obtida de outra conta/live pode ter disponibilidade diferente; confirme que os presentes estão disponíveis na conta transmissora.
 
-**Estado da validação real:** houve tentativa de conexão ao @soou_jg, sem conseguir localizar a sala (`Failed to retrieve Room ID from all sources`). Uma verificação posterior da página da live recebeu bloqueio de rede HTTP 403 do proxy deste ambiente. Isso impede verificar a conexão daqui e não confirma que a conta esteja offline. Nenhum presente real foi recebido ou validado nesta entrega. Os testes de eventos usam dados simulados. É necessário testar com a conta ao vivo no computador do transmissor.
+O importador salva só ID, nome, custo e URL HTTPS da imagem. Campos extras são descartados. Até 1.000 itens normalizados ficam em `.planalto-live.json.catalog.json`, ignorado pelo Git. A lista importada é restaurada ao reiniciar. Nenhum ID, preço ou imagem é inventado quando falta informação. Pares com preços conhecidos diferentes são rejeitados.
 
-## Regras da corrida
+No modo importado, conectar à live não dispara consulta ao catálogo PRO. A configuração inicial é feita uma vez; o público envia o presente correspondente, sem clicar ou comentar o nome. Sem metadados reais, a configuração continua pendente.
 
-- Rodadas de 180 segundos; ninguém avança sem presentes.
-- Um ponto vale 0,1% do percurso: são necessários 1.000 pontos para chegar à rampa. Valores em `src/game.js`, `CONFIG`.
-- Efeitos por unidade: rosa 1 ponto; coração 5; turbo 10; especial 25. São nomes dos efeitos de teste, não IDs do TikTok. Cada presente real mapeado pode usar um desses efeitos.
-- Presentes acumulam impulso sem perder a quantidade de uma sequência. Para presentes em sequência, só se credita o evento final com `repeatCount`, evitando duplicidade do encerramento. Pode haver espera até finalizar a sequência.
-- Eventos duplicados com o mesmo ID/grupo são ignorados por até 30 minutos (cache limitado a 20 mil entradas). Eventos sem identidade estável são ignorados por segurança de contagem. Reiniciar a conexão limpa o cache; histórico inicial é desativado para reduzir replay.
-- Durante pausa ou a tela final, presentes recebidos entram numa fila em memória (até 1.000 eventos) e são aplicados quando a corrida retoma. O painel mostra a fila. A fila e a corrida não sobrevivem ao fechamento do servidor. Não há recuperação de eventos ocorridos enquanto desconectado.
-- Ao terminar o tempo, vence a maior distância mesmo sem chegada; empate permitido. Vitória/empate dura um segundo, e a próxima rodada começa automaticamente, sem botão de replay.
-- Configuração pública de @ e IDs é salva em `.planalto-live.json`, ignorada pelo Git. Reconectar à live é manual ao reiniciar. Não são guardadas credenciais nem comentários.
+## Conectar e transmitir
 
-## Desenvolvimento
+Configure os presentes antes de anunciar participação. Inicie uma live pública e clique **Conectar live** no painel do jogo. O @soou_jg vem preenchido. O jogo apenas recebe eventos; não inicia a transmissão nem envia mensagens ao público. Verifique a mensagem de conexão e só considere recebimento real validado após um evento confirmado.
 
-Node.js 24 LTS recomendado. No diretório do projeto:
+A biblioteca `tiktok-live-connector` é de terceiros e depende do protocolo do TikTok e de serviços de assinatura; pode sofrer limites ou mudanças. Não se promete integração oficial ou disponibilidade garantida. Não são exigidos senha ou cookies de conta pelo jogo. O histórico inicial é desativado para reduzir replay de eventos antigos.
+
+**Estado atual:** conexão básica confirmada no computador do usuário, catálogo PRO indisponível no plano Community, recebimento de presentes reais ainda não validado. Testes locais usam dados simulados. A live foi encerrada após um aviso do TikTok sobre transmissão parada; mantenha a transmissão encerrada durante configuração e testes offline.
+
+## Catálogo do provedor, opcional
+
+Quem já possui acesso PRO pode usar **Catálogo do provedor · exige PRO** e consultar sem iniciar a live. Não é necessário contratar plano para usar a importação. Verifique condições e custos diretamente no provedor.
+
+O campo protegido guarda a chave apenas na memória do servidor durante a sessão; não salva em arquivos nem devolve o valor no estado público. O backend também reutiliza `EULER_API_KEY` ou `SIGN_API_KEY` existentes. Não cole chaves no chat, GitHub ou código. Ao usar uma chave, um cliente novo do SDK evita reutilizar instância anônima em cache.
+
+O SDK pode retornar HTTP 401 sem lançar exceção; o servidor verifica explicitamente esse status. Nenhuma assinatura ou validação TLS é desativada. Conexão da live e estado do catálogo são separados. Falha do catálogo não derruba uma conexão já estabelecida.
+
+## Regras
+
+- Rodadas de 180 segundos. Sem presentes não há avanço; 1.000 pontos completam o percurso.
+- Normais: 1 ponto por unidade. Especiais: 25 pontos por unidade. É possível ajustar os efeitos no painel.
+- Maior distância vence ao fim do tempo; empate permitido. Resultado aparece por um segundo e a próxima rodada começa automaticamente.
+- Placar superior simples. Os presentes ficam abaixo da pista, em duas colunas, sem seletor de candidato. No painel os botões simulam o corredor/efeito fixos; na captura são desativados e os avisos de teste ficam ocultos.
+- Sequências cumulativas só são creditadas no evento final. Eventos com identidade repetida são ignorados por até 30 minutos (cache máximo de 20 mil entradas). Sem identidade estável, não se credita o evento.
+- Durante pausa/tela final, eventos mapeados ficam na fila em memória (até 1.000). Fechar o servidor perde corrida, fila e cache; não há recuperação do que ocorreu desconectado.
+- Eventos não mapeados não avançam corredores. Metadados dos presentes recebidos podem alimentar uma lista parcial, sem inventar informações faltantes.
+- Configuração de @ e quatro IDs fica em `.planalto-live.json`, ignorado pelo Git. Conexão TikTok é manual ao reiniciar.
+
+## Desenvolvimento e verificação
 
 ```sh
 npm ci --cache /tmp/planalto-npm-cache --no-audit --no-fund
@@ -49,71 +65,12 @@ npm run build
 npm start
 ```
 
-Em Windows pode omitir a opção de cache, ou usar um diretório gravável do usuário. Para desenvolvimento com atualização automática, mantenha `npm start` em um terminal e execute `npm run dev` em outro. Vite encaminha `/api` e `/live` ao servidor da porta 8080. `npm run preview` só serve o build estático; para a ponte TikTok use `npm start`.
+`npm run dev` inicia Vite com proxy para o servidor da porta 8080; mantenha também `npm start`. `npm run preview` sozinho não fornece a ponte TikTok. Testes de navegador: `node tests/support-cards-smoke.mjs` (Chromium em /usr/bin/chromium). `tests/browser-smoke.mjs` usa um servidor ativo em `PLANALTO_TEST_URL` (padrão http://127.0.0.1:8086).
 
-A porta padrão é 8080, alterável por `PLANALTO_PORT`; o servidor escuta apenas em `127.0.0.1`. Não exponha esse painel na internet. O modo independente HTML antigo continua sendo somente simulação; receber eventos reais requer o servidor Node em execução.
+Os testes cobrem regras, roteamento, v3, sequências, importação, persistência, campos protegidos, API/WebSocket e caminhos Windows. Chromium valida presentes fixos, layout 9:16 e importação sem live. Não são testes reais de presentes do TikTok. Build gera aviso de bundle grande por incluir a textura dos rostos.
 
-## Testes e limites
+WebGL/aceleração gráfica são necessários. Partículas limitadas a 180, resolução limitada e qualidade reduzida em quadros lentos. 60 FPS depende do hardware. Fonte Google é opcional, com fallback local. Áudio precisa ser ativado por clique na janela que reproduz a cena.
 
-`npm test` executa testes de lógica, presentes cumulativos/deduplicação, adaptador simulado e API/WebSocket local. `node tests/browser-smoke.mjs` verifica WebGL, painel e fonte sincronizados, pausa/reset, formato 1080 × 1920, fallback GLB e layout móvel. Requer Chromium em `/usr/bin/chromium` ou `CHROMIUM_PATH`, e servidor ativo indicado por `PLANALTO_TEST_URL` (padrão http://127.0.0.1:8086). Não valida conexão TikTok real. O teste da API usa uma configuração temporária em `/tmp`, sem alterar dados do usuário.
+## Modelos GLB opcionais
 
-Build emite aviso de bundle grande: a textura dos rostos é embutida para suportar distribuição em HTML; não impede a compilação. Renderização WebGL requer aceleração gráfica. Partículas limitadas a 180, resolução limitada e qualidade reduzida em quadros lentos. Meta de 60 FPS depende do hardware. Fonte Google opcional, com fallback local.
-
-## Personagens GLB opcionais
-
-Coloque modelos licenciados em `public/models/` antes do build, ou no diretório correspondente do pacote. Carregue pelo console:
-
-```js
-await window.planalto.loadModel('r', '/models/lula.glb');
-await window.planalto.loadModel('g', '/models/flavio.glb');
-```
-
-Eixo Y vertical, frente +Z, altura normalizada automaticamente. Clipes `run`, `idle`, `celebrate`, sem distinção de maiúsculas. Se o GLB falhar, o personagem anterior permanece. Sem clipes, não há animação esquelética. Sem suporte implementado a expressões/morph targets. O carregamento é local à janela; para modelos permanentes configure-os no código de inicialização das duas telas.
-
-## Organização
-
-- `server/index.js`: servidor HTTP, WebSocket, corrida compartilhada, fila e configuração local.
-- `server/tiktok.js`: conexão pública de leitura e catálogo.
-- `server/gifts.js`: validação, roteamento por ID e deduplicação.
-- `src/game.js`: regras determinísticas e eventos.
-- `src/live.js`: cliente do servidor local.
-- `src/scene.js`, `characters.js`, `faces.js`: Three.js, cena e personagens.
-- `src/main.js`, `audio.js`, `style.css`: interface e áudio.
-
-O HTML original enviado foi analisado e preservado nos anexos: corrida CSS, pontuação, rosa/turbo, contador, pausa, reinício e confetes. A versão atual conserva essas capacidades e acrescenta cena 3D e ponte local.
-
-## Correção Windows 11: HTTP 403
-
-A checagem de arquivos estáticos usa caminhos nativos do sistema, incluindo barras invertidas do Windows. Se uma versão antiga responder 403, encerre o servidor com Ctrl+C e use a versão atualizada. Não é necessário desativar o Controle de Aplicativo Inteligente; se o .bat for bloqueado, abra cmd na pasta do projeto, execute npm ci --omit=dev e depois npm run start:open.
-
-## Cartões visuais de presentes
-
-O placar mostra o retrato ilustrado de cada candidato acima da imagem do presente atribuído a ele. Ao selecionar um item no catálogo e salvar, são preservados ID, nome, imagem HTTPS e custo informado. O público vê o presente correspondente abaixo do retrato, sem precisar selecionar candidato. Imagem ausente ou inacessível mantém um ícone neutro e o nome; sem mapeamento aparece Presente não configurado. As cabeças continuam sendo ilustrações, não fotografias. `node tests/support-cards-smoke.mjs` verifica posição dos retratos, miniaturas com fixtures, persistência e fallback no Chromium.
-
-## Rosa e dois especiais
-
-Cada corredor agora tem dois espaços de presente abaixo do retrato: NORMAL e ESPECIAL. Após conectar à live e carregar o catálogo, o botão CONFIGURAR ROSA + PARES IGUAIS salva quatro IDs reais: Rosa/Rose para Lula, outro presente do mesmo custo para Flávio e dois especiais distintos de igual custo. O par especial é o par de menor preço confirmado acima da rosa, para não escolher silenciosamente presentes mais caros. Os dois normais usam efeito de 1 ponto; os dois especiais usam 25 pontos por unidade. É possível ajustar pelo painel e salvar manualmente; pares com preços conhecidos diferentes são rejeitados. Sem catálogo ou par disponível, a configuração automática avisa e não inventa IDs, preços ou imagens. Nada disso confirma a conexão real, ainda pendente de teste na live.
-
-## Posição dos presentes e testes diretos
-
-O placar superior voltou a nomes, números e progresso, sem retratos. A indicação de presentes fica abaixo da pista, com uma coluna para Lula e outra para Flávio, cada uma com normal e especial. Não existe seleção de candidato. No painel, clicar em um dos quatro presentes simula diretamente o corredor e o efeito daquele espaço. Na tela de transmissão esses botões não são interativos, e as instruções de teste ficam ocultas; o público envia o presente real no TikTok. A configuração por IDs continua no painel de conexão.
-
-## Diagnóstico de conexão
-
-A prévia do LIVE Studio ainda não é uma live pública. Primeiro inicie a transmissão; depois conecte o jogo ao @. O painel e o terminal agora distinguem erros de sala não localizada, conta explicitamente offline, HTTP 403, limites, rede e certificados. Abra Detalhes da conexão para ver as fontes que falharam. O diagnóstico usa campos conhecidos, sem expor mensagens brutas, URLs com parâmetros, cabeçalhos, cookies ou credenciais. Uma falha genérica ao localizar a sala não prova que a conta está offline.
-
-## Falha real identificada no catálogo
-
-No teste feito pelo usuário no Windows, o conector mostrou CONEXAO OK e, ao consultar os presentes, SignatureMissingTokensError. O endpoint gift/list da biblioteca exige assinatura HTTP do provedor externo, diferente da conexão WebSocket da live. Essa assinatura continua sendo um requisito externo; não foi desativada e não foram solicitados senha ou cookies da conta. Conexão e catálogo agora têm estados separados, para uma falha no catálogo não indicar que a live desconectou.
-
-Como alternativa parcial, presentes que chegarem naturalmente pela live são identificados pelos metadados do próprio evento v3 (gift.id, gift.name, gift.diamondCount e gift.image.urlList). Eles aparecem na lista de seleção, com indicação de lista parcial; isso não fornece antecipadamente o catálogo completo e não deve ser motivo para pedir presentes de teste. Não se inventam preços, IDs ou imagens. Configuração de quatro presentes exige quatro metadados reais compatíveis, via catálogo disponível ou eventos observados. Mensagens v3 também usam gift.type e user.id, agora tratados corretamente na deduplicação de sequências.
-
-A live foi encerrada pelo usuário após um aviso do TikTok sobre transmissão parada. Não é necessário reabri-la para rodar npm test ou os testes locais no Chromium. A recepção de presentes reais ainda não foi validada. Build e 46 testes automatizados passaram com eventos simulados.
-
-## Catálogo de referência e autorização
-
-O botão Buscar catálogo (sem live) agora consulta o catálogo de referência pelo SDK oficial do provedor, sem conectar ao TikTok e sem remover a assinatura do endpoint da sala. Caso a assinatura da sala falhe com SignatureMissingTokensError, tenta essa consulta de referência. Catálogo de referência não confirma disponibilidade regional/na conta. O SDK pode retornar HTTP 401 sem lançar exceção; o servidor verifica explicitamente esse status.
-
-O teste do usuário confirmou HTTP 401 no endpoint de referência sem autenticação. Para esse caminho, o provedor exige autorização válida. Em Acesso ao catálogo · provedor externo, configure uma chave da API Euler Stream com permissão para a consulta. A disponibilidade do plano, eventual cobrança e os limites precisam ser conferidos no próprio provedor; não se promete acesso gratuito. Não cole a chave no chat, no GitHub ou no código. O campo protegido envia o valor apenas ao servidor local, que o mantém em memória nesta sessão. A chave não é devolvida no estado público nem gravada em arquivos. O backend aceita também EULER_API_KEY ou SIGN_API_KEY já presentes no ambiente. O cliente do SDK é recriado explicitamente para não reutilizar a instância anônima em cache ao configurar uma chave.
-
-A conexão com a live é independente do catálogo; o diagnóstico local básico conectou. Catálogo autenticado e recebimento de presentes reais ainda não foram validados. Mantenha a live encerrada durante preparação, testes simulados e consulta do catálogo de referência.
+Coloque modelos licenciados em public/models e use `window.planalto.loadModel('r','/models/lula.glb')` ou a equipe `g`. Altura é normalizada; eixo Y vertical, frente +Z. Clipes `run`, `idle`, `celebrate`, sem distinção de maiúsculas. Erros mantêm o personagem anterior. Sem clipes não há animação esquelética; expressões/morph targets não estão implementados. Carregamento é local à janela.

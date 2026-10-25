@@ -3,7 +3,7 @@ import {normalizeUsername} from './gifts.js';
 import {connectionFailure} from './connection-errors.js';
 import {loadGiftCatalog} from './catalog-loader.js';
 export class TikTokBridge {
- constructor({onStatus,onGift,onCatalog,onCatalogStatus=()=>{},factory=(name,options)=>new TikTokLiveConnection(name,options)}){Object.assign(this,{onStatus,onGift,onCatalog,onCatalogStatus,factory});this.client=null;this.version=0;this.catalogRequests=new WeakMap();}
+ constructor({onStatus,onGift,onCatalog,onCatalogStatus=()=>{},fetchCatalogOnConnect=()=>true,factory=(name,options)=>new TikTokLiveConnection(name,options)}){Object.assign(this,{onStatus,onGift,onCatalog,onCatalogStatus,fetchCatalogOnConnect,factory});this.client=null;this.version=0;this.catalogRequests=new WeakMap();}
  async connect(username){
   username=normalizeUsername(username);await this.disconnect();const version=++this.version;
   const client=this.factory(username,{processInitialData:false,enableExtendedGiftInfo:false,fetchRoomInfoOnConnect:true,authenticateWs:false,useMobile:false,webClientOptions:{timeout:{request:15000},retry:{limit:0}}});
@@ -15,7 +15,7 @@ export class TikTokBridge {
   try {
    const state=await client.connect();if(version!==this.version||this.client!==client){await client.disconnect();return;}
    this.onStatus({state:'connected',message:`Recebendo eventos de @${username}`,username,roomId:String(state.roomId)});
-   try{await this.catalog();}catch{/* Catalog status is separate; keep the established live connection. */}
+   if(this.fetchCatalogOnConnect())try{await this.catalog();}catch{/* Catalog status is separate; keep the established live connection. */}
   }catch(error){if(version===this.version&&this.client===client){this.client=null;try{await client.disconnect();}catch{}const failure=connectionFailure(error);this.onStatus({state:'error',username,...failure});console.warn('[TikTok]',failure.category,failure.message);for(const detail of failure.diagnostics)console.warn('[TikTok]',detail.route,detail.category,detail.httpStatus??detail.code??'');}}
  }
  async catalog(username='soou_jg'){

@@ -15,3 +15,5 @@ test('reference catalog can be prepared without connecting or changing live stat
  });
  await bridge.catalog('soou_jg');assert.equal(connects,0);assert.equal(bridge.client,null);assert.equal(catalog[0][0].name,'Rose');assert.equal(catalogStatuses.at(-1).state,'ready');assert.equal(catalogStatuses.at(-1).source,'reference');
 });
+
+test('imported catalog mode never queries paid catalog after connecting',async()=>{let client,requests=0;class Imported extends Fake{async fetchAvailableGifts(){requests++;throw new Error('Do not request paid catalog');}}const events=[],statuses=[];const bridge=new TikTokBridge({onStatus:x=>statuses.push(x),onGift:x=>events.push(x),onCatalog:()=>{},fetchCatalogOnConnect:()=>false,factory:()=>client=new Imported()});await bridge.connect('soou_jg');assert.equal(requests,0);assert.equal(statuses.at(-1).state,'connected');client.emit('gift',{giftId:123});assert.equal(events.length,1);await bridge.disconnect();});
