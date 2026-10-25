@@ -97,3 +97,7 @@ Cada corredor agora tem dois espaços de presente abaixo do retrato: NORMAL e ES
 ## Posição dos presentes e testes diretos
 
 O placar superior voltou a nomes, números e progresso, sem retratos. A indicação de presentes fica abaixo da pista, com uma coluna para Lula e outra para Flávio, cada uma com normal e especial. Não existe seleção de candidato. No painel, clicar em um dos quatro presentes simula diretamente o corredor e o efeito daquele espaço. Na tela de transmissão esses botões não são interativos, e as instruções de teste ficam ocultas; o público envia o presente real no TikTok. A configuração por IDs continua no painel de conexão.
+
+## Diagnóstico de conexão
+
+A prévia do LIVE Studio ainda não é uma live pública. Primeiro inicie a transmissão; depois conecte o jogo ao @. O painel e o terminal agora distinguem erros de sala não localizada, conta explicitamente offline, HTTP 403, limites, rede e certificados. Abra Detalhes da conexão para ver as fontes que falharam. O diagnóstico usa campos conhecidos, sem expor mensagens brutas, URLs com parâmetros, cabeçalhos, cookies ou credenciais. Uma falha genérica ao localizar a sala não prova que a conta está offline.
